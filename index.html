@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>姸姸和小賀</title>
+  <meta name="theme-color" content="#f7c7d9" />
+  <link rel="icon" href="data:," />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: linear-gradient(180deg, #fff9f5 0%, #fff1f4 48%, #fff7ea 100%);
+      --panel: rgba(255,255,255,.78);
+      --panel-strong: rgba(255,255,255,.92);
+      --text: #5d4350;
+      --muted: #8f6f7a;
+      --primary: #ee8fb1;
+      --primary-strong: #de6f98;
+      --accent: #f6c36a;
+      --line: rgba(224,156,183,.26);
+      --shadow: 0 18px 45px rgba(229,155,184,.18);
+      --hero-overlay: linear-gradient(180deg, rgba(120,70,90,.12), rgba(120,70,90,.36));
+    }
+    body.dark {
+      --bg: linear-gradient(180deg, #2d1f29 0%, #382633 45%, #1d1620 100%);
+      --panel: rgba(52,34,46,.74);
+      --panel-strong: rgba(63,42,55,.9);
+      --text: #fbeef3;
+      --muted: #d9b8c6;
+      --primary: #f4a4c0;
+      --primary-strong: #ffc2d6;
+      --accent: #ffd88b;
+      --line: rgba(255,220,234,.14);
+      --shadow: 0 18px 45px rgba(0,0,0,.35);
+      --hero-overlay: linear-gradient(180deg, rgba(18,10,16,.2), rgba(18,10,16,.55));
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", "PingFang TC", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      transition: background .35s ease, color .35s ease;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255, 212, 223, 0.45), transparent 28%),
+        radial-gradient(circle at 85% 10%, rgba(255, 236, 194, 0.35), transparent 24%),
+        radial-gradient(circle at 50% 100%, rgba(255, 215, 227, 0.22), transparent 35%);
+      z-index: 0;
+    }
+    .wrap { position: relative; z-index: 1; width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 64px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .brand { font-size: 14px; color: var(--muted); letter-spacing: .08em; }
+    .actions, .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button, .file-label {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 11px 16px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform .18s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+      font: inherit;
+    }
+    button:hover, .file-label:hover { transform: translateY(-1px); }
+    button.primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border: none; }
+    button.danger { background: linear-gradient(135deg, #df6f8f, #c04b76); color: #fff; border: none; }
+    button.secondary { background: transparent; }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    input[type="file"] { display: none; }
+    .hero {
+      position: relative; min-height: 420px; border-radius: 32px; overflow: hidden; box-shadow: var(--shadow);
+      border: 1px solid var(--line); background: #f6dbe4; display: grid; align-items: end; margin-bottom: 20px;
+    }
+    .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transform: scale(1.02); }
+    .hero-overlay { position: absolute; inset: 0; background: var(--hero-overlay); }
+    .hero-content { position: relative; z-index: 2; padding: 34px; display: grid; gap: 12px; }
+    h1 { margin: 0; font-size: clamp(32px, 4vw, 52px); line-height: 1.08; }
+    h2 { margin: 0; font-size: 22px; }
+    .lead { margin: 0; max-width: 720px; color: rgba(255,255,255,.95); font-size: 17px; line-height: 1.8; }
+    .chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.18); backdrop-filter: blur(8px); color: #fff; border: 1px solid rgba(255,255,255,.18); font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 26px; padding: 22px; box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+    .stack { display: grid; gap: 12px; }
+    .card p { margin: 0; color: var(--muted); line-height: 1.8; }
+    .hint, .status { font-size: 14px; padding: 12px 14px; border-radius: 16px; background: var(--panel-strong); border: 1px solid var(--line); color: var(--muted); }
+    .status.error { color: #b04369; }
+    .status.ok { color: #4b8d67; }
+    .gallery-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .gallery-selection { color: var(--muted); font-size: 14px; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .photo { overflow: hidden; border-radius: 22px; background: var(--panel-strong); border: 1px solid var(--line); box-shadow: var(--shadow); position: relative; }
+    .photo.selected { outline: 3px solid rgba(238,143,177,.58); }
+    .photo img { width: 100%; aspect-ratio: 1 / 1.12; object-fit: cover; display: block; cursor: pointer; }
+    .photo .meta { padding: 10px 12px 14px; color: var(--muted); font-size: 13px; word-break: break-word; }
+    .select-badge { position: absolute; top: 12px; left: 12px; z-index: 2; background: rgba(255,255,255,.92); color: #8f4864; border-radius: 999px; padding: 6px 10px; font-size: 12px; border: 1px solid rgba(223,135,170,.3); cursor: pointer; }
+    .music-panel { display: grid; gap: 12px; }
+    audio { width: 100%; }
+    .footer-note { text-align: center; color: var(--muted); font-size: 14px; padding-top: 8px; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(36,20,28,.52); display: none; place-items: center; z-index: 30; padding: 20px; }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(480px, 100%); background: var(--panel-strong); color: var(--text); border-radius: 24px; padding: 24px; border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .modal h3 { margin: 0 0 8px; font-size: 22px; }
+    .modal p { margin: 0 0 16px; color: var(--muted); line-height: 1.8; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+    .preview-box { width: min(980px, 100%); background: rgba(24,14,20,.94); border-radius: 24px; padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+    .preview-box img { width: 100%; max-height: 80vh; object-fit: contain; display: block; border-radius: 16px; }
+    .preview-caption { color: #f7e7ee; margin-top: 10px; font-size: 14px; text-align: center; }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .hero { min-height: 360px; }
+      .hero-content { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">YAN & HE · 幸福小天地</div>
+      <div class="actions">
+        <button id="themeToggle" class="secondary">切換深淺色</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div id="heroBg" class="hero-bg"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="chip-row">
+          <span class="chip">更溫柔的幸福色調</span>
+          <span class="chip">封面照儲存在雲端</span>
+          <span class="chip">可自訂背景音樂</span>
+        </div>
+        <h1>姸姸和小賀 會幸福一輩子</h1>
+        <p class="lead">這裡收藏著姸姸和小賀的幸福日常。新的版本把色調改得更溫暖，也把封面照與音樂設定放進雲端，讓換裝置後依然保留同一份心意。</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card stack">
+        <h2>封面照片設定</h2>
+        <p>封面照功能獨立成單一區塊，專門管理首頁封面圖片，不和相簿上傳混在一起。</p>
+        <div class="row">
+          <label class="file-label" for="coverInput">上傳封面照</label>
+          <input id="coverInput" type="file" accept="image/*" />
+          <button id="removeCoverBtn">刪除封面照</button>
+        </div>
+        <div id="coverStatus" class="status">正在檢查封面照設定…</div>
+        <div class="hint">封面圖片會儲存在 `photos` bucket 的 `cover/` 路徑中。</div>
+      </div>
+
+      <div class="card stack">
+        <h2>相簿照片上傳</h2>
+        <p>相簿上傳功能獨立成另一個區塊，可一次選取多張照片並上傳到網站相簿。</p>
+        <div class="row">
+          <label class="file-label" for="photoInput">選取多張照片上傳</label>
+          <input id="photoInput" type="file" accept="image/*" multiple />
+          <button id="refreshPhotosBtn">重新整理相簿</button>
+        </div>
+        <div id="uploadStatus" class="status">尚未開始上傳照片。</div>
+        <div class="hint">這裡上傳的照片會出現在下方幸福相簿中。</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card music-panel">
+        <h2>背景音樂</h2>
+        <p>可上傳 mp3 或含音訊的 mp4 檔案，網站會保存目前選定的背景音樂。</p>
+        <div class="row">
+          <label class="file-label" for="musicInput">上傳背景音樂</label>
+          <input id="musicInput" type="file" accept="audio/mpeg,audio/mp3,audio/mp4,video/mp4" />
+          <button id="removeMusicBtn">移除音樂</button>
+        </div>
+        <audio id="bgMusic" controls preload="none" loop></audio>
+        <div id="musicStatus" class="status">尚未設定背景音樂。</div>
+        <div class="hint">為避免瀏覽器自動播放限制，請手動按播放鍵開始播放；播放結束後會自動循環。</div>
+      </div>
+
+      <div class="card stack">
+        <h2>幸福留言</h2>
+        <p>不管是日常、合照、搞怪瞬間，還是每一次陪在彼此身邊的時候，都在慢慢累積成屬於姸姸和小賀的一輩子幸福。</p>
+        <div id="cloudStatus" class="status">正在讀取 Netlify + Supabase 設定…</div>
+      </div>
+    </section>
+
+    <section class="card stack">
+      <div class="gallery-toolbar">
+        <h2>幸福相簿</h2>
+        <div class="row">
+          <button id="toggleSelectModeBtn">開始選取照片</button>
+          <span id="selectionCount" class="gallery-selection">目前為檢視模式</span>
+          <button id="deleteSelectedBtn" class="danger" disabled>刪除選取照片</button>
+        </div>
+      </div>
+      <div class="hint">平常直接點照片會放大檢視；按下「開始選取照片」後，才可開始多選照片並刪除。</div>
+      <div id="gallery" class="gallery"></div>
+    </section>
+
+    <div class="footer-note">部署方式：Netlify + GitHub，Supabase 負責雲端照片與背景音樂檔案。</div>
+  </div>
+
+  <div id="confirmModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">確認刪除照片</h3>
+      <p id="modalText">你確定要刪除選取的照片嗎？刪除後將無法復原。</p>
+      <div class="modal-actions">
+        <button id="cancelDeleteBtn">先不要</button>
+        <button id="confirmDeleteBtn" class="danger">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="previewModal" class="modal-backdrop" aria-hidden="true">
+    <div class="preview-box">
+      <img id="previewImage" src="" alt="照片預覽" />
+      <div id="previewCaption" class="preview-caption"></div>
+    </div>
+  </div>
+
+  <script>
+    const FALLBACK_GRADIENT = 'linear-gradient(135deg, #f7d4df 0%, #f9ecd2 100%)';
+    const themeToggle = document.getElementById('themeToggle');
+    const heroBg = document.getElementById('heroBg');
+    const coverInput = document.getElementById('coverInput');
+    const removeCoverBtn = document.getElementById('removeCoverBtn');
+    const coverStatus = document.getElementById('coverStatus');
+    const cloudStatus = document.getElementById('cloudStatus');
+    const photoInput = document.getElementById('photoInput');
+    const refreshPhotosBtn = document.getElementById('refreshPhotosBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const gallery = document.getElementById('gallery');
+    const musicInput = document.getElementById('musicInput');
+    const removeMusicBtn = document.getElementById('removeMusicBtn');
+    const bgMusic = document.getElementById('bgMusic');
+    const musicStatus = document.getElementById('musicStatus');
+    const selectionCount = document.getElementById('selectionCount');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const toggleSelectModeBtn = document.getElementById('toggleSelectModeBtn');
+    const confirmModal = document.getElementById('confirmModal');
+    const modalText = document.getElementById('modalText');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const previewModal = document.getElementById('previewModal');
+    const previewImage = document.getElementById('previewImage');
+    const previewCaption = document.getElementById('previewCaption');
+
+    const THEME_KEY = 'yanhe-theme';
+    const COVER_PREFIX = 'cover/';
+    const MUSIC_PREFIX = 'music/';
+    const SETTINGS_PATH = 'site/site-settings.json';
+
+    let supabaseClient = null;
+    let bucketName = 'photos';
+    let siteSettings = { coverUrl: '', musicUrl: '', updatedAt: '' };
+    let selectedPhotos = new Set();
+    let photoRecords = [];
+    let selectMode = false;
+
+    function setTheme(theme) {
+      document.body.classList.toggle('dark', theme === 'dark');
+      localStorage.setItem(THEME_KEY, theme);
+      themeToggle.textContent = theme === 'dark' ? '切換為淺色模式' : '切換為深色模式';
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem(THEME_KEY) || 'light';
+      setTheme(saved);
+      themeToggle.addEventListener('click', () => {
+        const next = document.body.classList.contains('dark') ? 'light' : 'dark';
+        setTheme(next);
+      });
+    }
+
+    function setStatus(el, text, type='') {
+      el.textContent = text;
+      el.className = 'status' + (type ? ` ${type}` : '');
+    }
+
+    function applyCover(url) {
+      heroBg.style.backgroundImage = url ? `url('${url}')` : FALLBACK_GRADIENT;
+    }
+
+    function updateSelectionUI() {
+      if (!selectMode) {
+        selectionCount.textContent = '目前為檢視模式';
+        toggleSelectModeBtn.textContent = '開始選取照片';
+        deleteSelectedBtn.disabled = true;
+        return;
+      }
+      const count = selectedPhotos.size;
+      selectionCount.textContent = count ? `選取模式中，已選取 ${count} 張照片` : '選取模式中，尚未選取照片';
+      toggleSelectModeBtn.textContent = '結束選取';
+      deleteSelectedBtn.disabled = count === 0;
+    }
+
+    function setSelectMode(enabled) {
+      selectMode = enabled;
+      if (!enabled) clearSelection();
+      updateSelectionUI();
+    }
+
+    function toggleSelection(path) {
+      if (!selectMode) return;
+      if (selectedPhotos.has(path)) selectedPhotos.delete(path);
+      else selectedPhotos.add(path);
+      const safePath = (window.CSS && CSS.escape) ? CSS.escape(path) : path.replace(/"/g, '\\"');
+      const card = gallery.querySelector(`[data-path="${safePath}"]`);
+      if (card) card.classList.toggle('selected', selectedPhotos.has(path));
+      updateSelectionUI();
+    }
+
+    function clearSelection() {
+      selectedPhotos.clear();
+      gallery.querySelectorAll('.photo.selected').forEach(el => el.classList.remove('selected'));
+    }
+
+    function openDeleteModal() {
+      const count = selectedPhotos.size;
+      modalText.textContent = `你確定要刪除這 ${count} 張選取的照片嗎？刪除後將無法復原。`;
+      confirmModal.classList.add('open');
+      confirmModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDeleteModal() {
+      confirmModal.classList.remove('open');
+      confirmModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openPreview(url, name) {
+      previewImage.src = url;
+      previewCaption.textContent = name || '';
+      previewModal.classList.add('open');
+      previewModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closePreview() {
+      previewModal.classList.remove('open');
+      previewModal.setAttribute('aria-hidden', 'true');
+      previewImage.src = '';
+      previewCaption.textContent = '';
+    }
+
+    async function getCloudConfig() {
+      const res = await fetch('/.netlify/functions/supabase-config');
+      if (!res.ok) throw new Error('無法讀取 Netlify 雲端設定');
+      const data = await res.json();
+      if (!data.url || !data.key) throw new Error('Missing Netlify env config');
+      return data;
+    }
+
+    function getPublicUrl(path) {
+      const { data } = supabaseClient.storage.from(bucketName).getPublicUrl(path);
+      return data.publicUrl;
+    }
+
+    async function uploadFile(path, file, contentType) {
+      const { error } = await supabaseClient.storage.from(bucketName).upload(path, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType
+      });
+      if (error) throw error;
+      return getPublicUrl(path) + `?t=${Date.now()}`;
+    }
+
+    async function deleteFiles(paths) {
+      if (!paths.length) return;
+      const { error } = await supabaseClient.storage.from(bucketName).remove(paths);
+      if (error) throw error;
+    }
+
+    async function saveSettings(next) {
+      siteSettings = { ...siteSettings, ...next, updatedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(siteSettings, null, 2)], { type: 'application/json' });
+      await uploadFile(SETTINGS_PATH, blob, 'application/json');
+    }
+
+    async function loadSettings() {
+      try {
+        const url = getPublicUrl(SETTINGS_PATH) + `?t=${Date.now()}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        siteSettings = await res.json();
+      } catch (_) {}
+    }
+
+    async function refreshCover() {
+      await loadSettings();
+      if (siteSettings.coverUrl) {
+        applyCover(siteSettings.coverUrl);
+        setStatus(coverStatus, '封面照已從雲端載入。', 'ok');
+      } else {
+        applyCover('');
+        setStatus(coverStatus, '目前沒有雲端封面照，已改用溫暖漸層背景。');
+      }
+    }
+
+    async function refreshMusic() {
+      await loadSettings();
+      if (siteSettings.musicUrl) {
+        bgMusic.src = siteSettings.musicUrl;
+        bgMusic.loop = true;
+        setStatus(musicStatus, '背景音樂已載入，播放完會自動循環。', 'ok');
+      } else {
+        bgMusic.removeAttribute('src');
+        bgMusic.loop = true;
+        bgMusic.load();
+        setStatus(musicStatus, '尚未設定背景音樂。');
+      }
+    }
+
+    function renderGallery() {
+      clearSelection();
+      updateSelectionUI();
+      if (!photoRecords.length) {
+        gallery.innerHTML = '<div class="status">目前還沒有雲端照片。</div>';
+        return;
+      }
+      gallery.innerHTML = photoRecords.map(item => {
+        const url = getPublicUrl(item.path) + `?t=${Date.now()}`;
+        return `
+          <article class="photo" data-path="${item.path}">
+            <button class="select-badge" type="button" data-select="${item.path}">選取</button>
+            <img src="${url}" alt="幸福照片" loading="lazy" data-preview="${url}" data-name="${item.name}" />
+            <div class="meta">${item.name}</div>
+          </article>
+        `;
+      }).join('');
+
+      gallery.querySelectorAll('[data-select]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSelection(btn.dataset.select);
+        });
+      });
+
+      gallery.querySelectorAll('.photo').forEach(card => {
+        card.addEventListener('click', (e) => {
+          const img = card.querySelector('img');
+          if (selectMode) {
+            toggleSelection(card.dataset.path);
+          } else if (img) {
+            openPreview(img.dataset.preview, img.dataset.name);
+          }
+        });
+      });
+    }
+
+    async function listFolder(folder = '', offset = 0, acc = []) {
+      const { data, error } = await supabaseClient.storage.from(bucketName).list(folder, {
+        limit: 100,
+        offset,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+      if (error) throw error;
+      const items = data || [];
+      acc.push(...items);
+      if (items.length === 100) return listFolder(folder, offset + 100, acc);
+      return acc;
+    }
+
+    async function listPhotos() {
+      gallery.innerHTML = '<div class="status">正在讀取雲端照片…</div>';
+      const items = await listFolder('');
+      photoRecords = items.filter(item => {
+        return item.name && !item.name.startsWith('cover') && !item.name.startsWith('music') && !item.name.startsWith('site') && !item.metadata?.mimetype?.startsWith?.('audio');
+      }).map(item => ({ name: item.name, path: item.name }));
+      renderGallery();
+    }
+
+    async function uploadPhotos(files) {
+      const list = Array.from(files || []).filter(file => file && (file.type.startsWith('image/') || !file.type));
+      if (!list.length) {
+        setStatus(uploadStatus, '沒有可上傳的圖片檔案。', 'error');
+        return;
+      }
+      setStatus(uploadStatus, `正在上傳 ${list.length} 張照片…`);
+      for (const file of list) {
+        const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const safeName = `${stamp}-${file.name.replace(/\s+/g, '-')}`;
+        await uploadFile(safeName, file, file.type || 'image/jpeg');
+      }
+      setStatus(uploadStatus, `成功上傳 ${list.length} 張照片。`, 'ok');
+      await listPhotos();
+    }
+
+    async function deleteSelectedPhotos() {
+      const paths = Array.from(selectedPhotos);
+      if (!paths.length) return;
+      setStatus(cloudStatus, `正在刪除 ${paths.length} 張照片…`);
+      await deleteFiles(paths);
+      closeDeleteModal();
+      setStatus(cloudStatus, `已刪除 ${paths.length} 張照片。`, 'ok');
+      await listPhotos();
+      setSelectMode(false);
+    }
+
+    async function initCloud() {
+      try {
+        initTheme();
+        applyCover('');
+        updateSelectionUI();
+        const config = await getCloudConfig();
+        bucketName = config.bucket || 'photos';
+        supabaseClient = window.supabase.createClient(config.url, config.key);
+        setStatus(cloudStatus, 'Netlify 與 Supabase 設定成功，已連上雲端。', 'ok');
+        await refreshCover();
+        await refreshMusic();
+        await listPhotos();
+      } catch (err) {
+        console.error(err);
+        setStatus(cloudStatus, err.message || '雲端設定失敗。', 'error');
+        setStatus(coverStatus, '封面照雲端設定失敗。', 'error');
+        setStatus(musicStatus, '背景音樂雲端設定失敗。', 'error');
+        setStatus(uploadStatus, '照片上傳功能初始化失敗。', 'error');
+        gallery.innerHTML = '<div class="status error">目前無法載入雲端照片。</div>';
+      }
+    }
+
+    coverInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !supabaseClient) return;
+      try {
+        setStatus(coverStatus, '正在上傳封面照…');
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        const old = await listFolder('cover');
+        const oldPaths = old.map(item => `${COVER_PREFIX}${item.name}`);
+        if (oldPaths.length) await deleteFiles(oldPaths);
+        const url = await uploadFile(`${COVER_PREFIX}current-cover.${ext}`, file, file.type || 'image/jpeg');
+        await saveSettings({ coverUrl: url });
+        applyCover(url);
+        setStatus(coverStatus, '封面照已上傳並套用。', 'ok');
+      } catch (err) {
+        setStatus(coverStatus, err.message || '封面照上傳失敗。', 'error');
+      }
+      e.target.value = '';
+    });
+
+    removeCoverBtn.addEventListener('click', async () => {
+      if (!supabaseClient) return;
+      try {
+        setStatus(coverStatus, '正在刪除封面照…');
+        const old = await listFolder('cover');
+        const oldPaths = old.map(item => `${COVER_PREFIX}${item.name}`);
+        if (oldPaths.length) await deleteFiles(oldPaths);
+        await saveSettings({ coverUrl: '' });
+        applyCover('');
+        setStatus(coverStatus, '封面照已刪除，已改回溫暖背景。', 'ok');
+      } catch (err) {
+        setStatus(coverStatus, err.message || '刪除封面照失敗。', 'error');
+      }
+    });
+
+    photoInput.addEventListener('change', async (e) => {
+      try {
+        await uploadPhotos(e.target.files);
+      } catch (err) {
+        console.error(err);
+        setStatus(uploadStatus, err.message || '照片上傳失敗。', 'error');
+      }
+      e.target.value = '';
+    });
+
+    refreshPhotosBtn.addEventListener('click', async () => {
+      if (!supabaseClient) return;
+      try {
+        setStatus(uploadStatus, '正在重新整理相簿…');
+        await listPhotos();
+        setStatus(uploadStatus, '相簿已重新整理。', 'ok');
+      } catch (err) {
+        setStatus(uploadStatus, err.message || '重新整理相簿失敗。', 'error');
+      }
+    });
+
+    musicInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !supabaseClient) return;
+      try {
+        setStatus(musicStatus, '正在上傳背景音樂…');
+        const ext = (file.name.split('.').pop() || 'mp3').toLowerCase();
+        const old = await listFolder('music');
+        const oldPaths = old.map(item => `${MUSIC_PREFIX}${item.name}`);
+        if (oldPaths.length) await deleteFiles(oldPaths);
+        const url = await uploadFile(`${MUSIC_PREFIX}current-music.${ext}`, file, file.type || 'audio/mpeg');
+        await saveSettings({ musicUrl: url });
+        bgMusic.src = url;
+        bgMusic.loop = true;
+        bgMusic.load();
+        setStatus(musicStatus, '背景音樂已更新。', 'ok');
+      } catch (err) {
+        setStatus(musicStatus, err.message || '背景音樂上傳失敗。', 'error');
+      }
+      e.target.value = '';
+    });
+
+    removeMusicBtn.addEventListener('click', async () => {
+      if (!supabaseClient) return;
+      try {
+        setStatus(musicStatus, '正在移除背景音樂…');
+        const old = await listFolder('music');
+        const oldPaths = old.map(item => `${MUSIC_PREFIX}${item.name}`);
+        if (oldPaths.length) await deleteFiles(oldPaths);
+        await saveSettings({ musicUrl: '' });
+        bgMusic.removeAttribute('src');
+        bgMusic.loop = true;
+        bgMusic.load();
+        setStatus(musicStatus, '背景音樂已移除。', 'ok');
+      } catch (err) {
+        setStatus(musicStatus, err.message || '移除背景音樂失敗。', 'error');
+      }
+    });
+
+    toggleSelectModeBtn.addEventListener('click', () => {
+      setSelectMode(!selectMode);
+    });
+
+    deleteSelectedBtn.addEventListener('click', () => {
+      if (!selectedPhotos.size) return;
+      openDeleteModal();
+    });
+
+    cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    confirmDeleteBtn.addEventListener('click', async () => {
+      try {
+        await deleteSelectedPhotos();
+      } catch (err) {
+        closeDeleteModal();
+        setStatus(cloudStatus, err.message || '刪除照片失敗。', 'error');
+      }
+    });
+
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) closeDeleteModal();
+    });
+
+    previewModal.addEventListener('click', (e) => {
+      if (e.target === previewModal || e.target === previewImage) closePreview();
+    });
+
+    initCloud();
+  </script>
+</body>
+</html>
